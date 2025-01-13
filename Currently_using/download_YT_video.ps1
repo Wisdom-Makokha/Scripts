@@ -28,7 +28,7 @@ if ($videoURL -eq "") {
 }
 
 $userQuestion = "Proceed with {0}p resolution?" -f $resolution
-[int]$userResponse = & $pwd + "yes_no_user_query.ps1" -query $userQuestion -ErrorAction Stop
+[int]$userResponse = Get-UserResponse -query $userQuestion -ErrorAction Stop
 
 if ($userResponse -eq 2) {
     
@@ -47,7 +47,7 @@ if ($userResponse -eq 2) {
             $validEntry = $true
             
             $userQuestion = "Proceed with {0}p resolution?" -f $resolutions[$userResolutionChoice]
-            [int]$userResponse = & $pwd + "yes_no_user_query.ps1" -query $userQuestion -ErrorAction Stop
+            [int]$userResponse = Get-UserResponse -query $userQuestion -ErrorAction Stop
 
             if ($userResponse -eq 1) {
                 $resolution = $resolutions[$userResolutionChoice]
@@ -79,7 +79,7 @@ if ($playlistURLToggle) {
         }
         else {
             $userQuestion = "Proceed with downloading from {0} to {1}(if not, you can enter the values again)" -f $firstVideo, $lastVideo
-            [int]$userResponse = & $pwd + "yes_no_user_query.ps1" -query $userQuestion -ErrorAction Stop
+            [int]$userResponse = Get-UserResponse -query $userQuestion -ErrorAction Stop
 
             if ($userResponse -eq 1) {
                 $okayProceed = $true
@@ -121,4 +121,43 @@ if (Test-Path -Path $mostRecentfile.FullName) {
 }
 else {
     Write-Host "No file to modify" -ForegroundColor Red
+}
+
+function Get-UserResponse {
+    # A script to simply ask a user query
+    # it returns
+    #  1 for yes 
+    #  2 for no
+    #  3 for unkown response
+    param (
+        [string]$query
+    )
+
+    # expected responses
+    $positiveResponse = @("y", "yes")
+    $negativeResponse = @("n", "no")
+    $response = $positiveResponse + $negativeResponse
+
+    Write-Host $query -ForegroundColor Yellow
+    $userResponse = Read-Host "User reply options - (yes/y or no/n)"
+
+    [int]$returnValue = 3
+
+    if ($response.Contains($userResponse)) {
+        if ($positiveResponse.Contains($userResponse)) {
+            # Write-Host "Positive" -ForegroundColor Green
+            $returnValue = 1
+        }
+        elseif ($negativeResponse.Contains($userResponse)) {
+            # Write-Host "Negative" -ForegroundColor Red
+            $returnValue = 2
+        }
+    }
+    else {
+        Write-Host "Unknown user response: " -ForegroundColor Magenta -NoNewline
+        Write-Host $userResponse -ForegroundColor Blue
+        $returnValue = 3
+    }
+
+    return $returnValue
 }
