@@ -1,6 +1,6 @@
 param (
     [string]$videoURL = "",
-    [string]$resolution = "720",
+    [string]$resolution = "",
     [switch]$playlistURLToggle
 )
 
@@ -23,26 +23,31 @@ function Get-UserResponse {
     $userResponse = Read-Host "User reply options - (yes/y or no/n)"
 
     [int]$returnValue = 3
+    $tryAgain = $true
 
-    if ($response.Contains($userResponse)) {
-        if ($positiveResponse.Contains($userResponse)) {
-            # Write-Host "Positive" -ForegroundColor Green
-            $returnValue = 1
+    while ($tryAgain) {
+        if ($response.Contains($userResponse)) {
+            if ($positiveResponse.Contains($userResponse)) {
+                # Write-Host "Positive" -ForegroundColor Green
+                $returnValue = 1
+            }
+            elseif ($negativeResponse.Contains($userResponse)) {
+                # Write-Host "Negative" -ForegroundColor Red
+                $returnValue = 2
+            }
+
+            $tryAgain = $false
         }
-        elseif ($negativeResponse.Contains($userResponse)) {
-            # Write-Host "Negative" -ForegroundColor Red
-            $returnValue = 2
+        else {
+            Write-Host "Unknown user response: " -ForegroundColor Magenta -NoNewline
+            Write-Host $userResponse -ForegroundColor Blue
         }
-    }
-    else {
-        Write-Host "Unknown user response: " -ForegroundColor Magenta -NoNewline
-        Write-Host $userResponse -ForegroundColor Blue
-        $returnValue = 3
     }
 
     return $returnValue
 }
 
+$resolutionValues = @("144", "360", "480", "720", "1080", "1440", "2160")
 $resolutions = 
 @{
     '1' = 144
@@ -66,33 +71,41 @@ if ($videoURL -eq "") {
     $videoURL = Read-Host $downloadTypeQuery
 }
 
-$userQuestion = "Proceed with {0}p resolution?" -f $resolution
-[int]$userResponse = Get-UserResponse -query $userQuestion -ErrorAction Stop
+if (($resolution -eq "") -or ($resolutionValues.Contains($resolution) -eq $false)) {
+    Write-Host "Wrong or no resolution value set: " -ForegroundColor Red -NoNewline
+    Write-Host $resolution -ForegroundColor Cyan
 
-if ($userResponse -eq 2) {
-    
-    $resolutions.Keys | Sort-Object | ForEach-Object {
-        $selection = "{0} - {1}p" -f $_, $resolutions[$_]
-        Write-Host $selection -ForegroundColor Blue
-    }
+    $resolution = "720"
+    Write-Host "Default resolution set to: " -ForegroundColor Yellow -NoNewline
+    Write-Host $resolution -ForegroundColor Cyan
 
-    Write-Host "Pick your preffered resolution for the video(s) to be downloaded" -ForegroundColor Yellow
-    Write-Host "(type the number and press enter)" -ForegroundColor DarkYellow
-    $userResolutionChoice = Read-Host "Enter pick"
-    [bool]$validEntry = $false
+    $userQuestion = "Proceed with {0}p resolution?" -f $resolution
+    [int]$userResponse = Get-UserResponse -query $userQuestion -ErrorAction Stop
 
-    do {
-        if ($resolutions.ContainsKey($userResolutionChoice)) {
-            $validEntry = $true
-            
-            $userQuestion = "Proceed with {0}p resolution?" -f $resolutions[$userResolutionChoice]
-            [int]$userResponse = Get-UserResponse -query $userQuestion -ErrorAction Stop
-
-            if ($userResponse -eq 1) {
-                $resolution = $resolutions[$userResolutionChoice]
-            }
+    if ($userResponse -eq 2) {
+        $resolutions.Keys | Sort-Object | ForEach-Object {
+            $selection = "{0} - {1}p" -f $_, $resolutions[$_]
+            Write-Host $selection -ForegroundColor Blue
         }
-    }while (-not($validEntry))
+
+        Write-Host "Pick your preffered resolution for the video(s) to be downloaded" -ForegroundColor Yellow
+        Write-Host "(type the number and press enter)" -ForegroundColor DarkYellow
+        $userResolutionChoice = Read-Host "Enter pick"
+        [bool]$validEntry = $false
+
+        do {
+            if ($resolutions.ContainsKey($userResolutionChoice)) {
+                $validEntry = $true
+            
+                $userQuestion = "Proceed with {0}p resolution?" -f $resolutions[$userResolutionChoice]
+                [int]$userResponse = Get-UserResponse -query $userQuestion -ErrorAction Stop
+
+                if ($userResponse -eq 1) {
+                    $resolution = $resolutions[$userResolutionChoice]
+                }
+            }
+        }while (-not($validEntry))
+    }
 }
 
 Write-Host "Video resolution set to: " -ForegroundColor Yellow -NoNewline
@@ -149,7 +162,7 @@ if ($playlistURLToggle) {
     }
 }
 else {
-    yt-dlp -S $resolutionOption -o "%(title)s.%(ext)s" $videoURL
+    yt-dlp -S $resolutionOption -o "%(title)s.%(ext)s" --no-playlist $videoURL
 }
 
 $fileNumberToChange = [int]1
